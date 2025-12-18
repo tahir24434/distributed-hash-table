@@ -1,3 +1,19 @@
+'''
+A load generator and correctness validator for testing the distributed hash table system.
+What it does?
+1. Generates continuous random workload against the DHT
+2. Validates consistency - ensures writes are correctly replicated and reads return correct values
+3. Acts as stress test - detects bugs in replication, routing, and concurrency
+Workload pattern:
+1. Connects to any node (leader or replica) specified via command line.
+2. a/ SET random key-value with timestamp-based req_id 
+   b/ DELETE the key (10% probability)
+   c/ GET the key immediately after
+Validation logic:
+- If deleted → GET should return "Non existent key" error (else: bug detected)
+- If not deleted → GET should return exact value that was SET (else: bug detected)
+- When bugs detected: prints error and pauses 5 seconds to alert operator
+'''
 import sys, socket
 from threading import Thread
 import random, string, time
@@ -61,7 +77,7 @@ while True:
     resp = server.recv(2048).decode()
     print(resp)
     try:
-        if h == 1:
+        if h == 1: # If we deleted, expect error.
             if resp != 'Error: Non existent key':
                 print(resp)
                 time.sleep(5)
